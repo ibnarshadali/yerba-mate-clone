@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Recreate public reference content in TanStack routes using CDN asset pointers; this preserves the target runtime and original media.
+- Keep commerce completion linked to the original store until owner access is supplied; a public-site clone cannot provision independent payments or private accounts.
