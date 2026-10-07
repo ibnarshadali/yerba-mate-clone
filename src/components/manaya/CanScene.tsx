@@ -24,7 +24,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model); const size = box.getSize(new THREE.Vector3());
       model.position.sub(box.getCenter(new THREE.Vector3()));
-      group.add(model); camera.position.z = size.y * 2.1;
+      group.add(model); camera.position.z = size.y * 4.3;
       model.traverse(obj => { if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) { material.current = obj.material; obj.material.metalness = .12; obj.material.roughness = .45; } });
       const texture = new THREE.TextureLoader().load(assets['melo.png'] ?? ''); texture.flipY = false; texture.colorSpace = THREE.SRGBColorSpace;
       if (material.current) { material.current.map = texture; material.current.needsUpdate = true; }
