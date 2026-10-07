@@ -22,7 +22,7 @@ export function Header() {
       </nav>
     </div>
     {menu && <div className="mega-menu"><Button variant="ghost" className="menu-close" size="icon" aria-label="Close menu" onClick={() => setMenu(null)}><X /></Button>
-      {menu === 'shop' ? <><div className="menu-products">{products.map((p, i) => <Link key={p.handle} to="/products/$handle" params={{ handle: p.handle }} onClick={() => setMenu(null)}><img src={productImages[i]} alt={p.title} /><span>{p.title} <ArrowUpRight size={18} /></span></Link>)}</div><Link to="/collections/all" onClick={() => setMenu(null)}>All our products →</Link></> : <div className="learn-links">{[['points-de-vente', 'Points of sale'], ['yerba-mate', 'Yerba Mate'], ['faq', 'FAQ'], ['contactez-nous', 'Contact'], ['abonnement', 'Subscription']].map(([slug, title]) => <Link key={slug} to="/pages/$slug" params={{ slug }} onClick={() => setMenu(null)}>{title}<ArrowUpRight /></Link>)}</div>}
+      {menu === 'shop' ? <><div className="menu-products">{products.map((p, i) => <Link key={p.handle} to="/products/$handle" params={{ handle: p.handle }} onClick={() => setMenu(null)}><img src={productImages[i]} alt={p.title} /><span>{p.title} <ArrowUpRight size={18} /></span></Link>)}</div><Link to="/collections/all" onClick={() => setMenu(null)}>All our products →</Link></> : <div className="learn-links">{([['points-de-vente', 'Points of sale'], ['yerba-mate', 'Yerba Mate'], ['faq', 'FAQ'], ['contactez-nous', 'Contact'], ['abonnement', 'Subscription']] as const).map(([slug, title]) => <Link key={slug} to="/pages/$slug" params={{ slug }} onClick={() => setMenu(null)}>{title}<ArrowUpRight /></Link>)}</div>}
     </div>}
   </header>;
 }

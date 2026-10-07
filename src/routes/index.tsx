@@ -15,7 +15,9 @@ const flavorKeys = ['melon', 'grapefruit', 'blackberry', 'tropical'];
 const benefits = [['WITHOUT THE CRASH', 'A gentle wave of energy. To get you going without the crash.'], ['NATURAL CAFFEINE', 'This certified organic caffeine comes from the plant. A gift from Mother Nature.'], ['ANTIOXIDANT', 'Richer in antioxidants than tea. Not bad.'], ['VEGAN', 'A plant-based drink that tastes like heaven. Who could ask for more?']];
 function Index() {
   const [flavor, setFlavor] = useState(0);
-  const key = flavorKeys[flavor];
+  const key = flavorKeys[flavor] ?? 'melon';
+  const current = products[flavor];
+  if (!current) return null;
   const change = (delta: number) => setFlavor((flavor + delta + 4) % 4);
   return <Site className={`home flavor-${key}`}><main>
     <section className="drink-hero" aria-label="MANA Yerba Maté">
@@ -28,7 +30,7 @@ function Index() {
         {flavor === 3 && <img className="mango-art" src={assets['mango.svg']} alt="" />}
       </div>
       <ClientOnly><Suspense fallback={<div className="can-scene" />}><CanScene flavor={flavor} /></Suspense></ClientOnly>
-      <div className="hero-controls"><Button className="nav-pill round" onClick={() => change(-1)} aria-label="Previous flavor"><ArrowLeft /></Button><Button className="flavor-button" asChild><Link to="/products/$handle" params={{ handle: products[flavor].handle }}>{products[flavor].title}</Link></Button><Button className="nav-pill round" onClick={() => change(1)} aria-label="Next flavor"><ArrowRight /></Button></div>
+      <div className="hero-controls"><Button className="nav-pill round" onClick={() => change(-1)} aria-label="Previous flavor"><ArrowLeft /></Button><Button className="flavor-button" asChild><Link to="/products/$handle" params={{ handle: current.handle }}>{current.title}</Link></Button><Button className="nav-pill round" onClick={() => change(1)} aria-label="Next flavor"><ArrowRight /></Button></div>
     </section>
     <section className="intro-section"><h2>MANA ? YERBA MATÉ ?<br />WHAT ARE WE TALKING ABOUT?</h2><p>(we're going to tell each other the real things)</p><div className="benefits">{benefits.map(([title, text], i) => <article key={title}><Animation url={assets[`benefit-${i + 1}.json`]} className="benefit-art" /><h3>{title}</h3><p>{text}</p></article>)}</div></section>
     <section className="flavors-section"><h2>FLAVORS</h2><p>FRESH, FRUITY, SPARKLING, BEAUTIFUL COLOURS,<br />AWAKEN YOUR TASTE BUDS.</p><div className="flavor-photos"><img src={assets['left.jpg']} alt="MANA sparkling yerba mate flavors" loading="lazy" /><img src={assets['right.jpg']} alt="Fresh fruity MANA drinks" loading="lazy" /></div></section>

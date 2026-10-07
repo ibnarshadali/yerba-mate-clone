@@ -18,7 +18,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
     const light = new THREE.DirectionalLight(0xffffff, 3); light.position.set(2, 3, 4); scene.add(light);
     const group = new THREE.Group(); scene.add(group);
     let disposed = false;
-    new GLTFLoader().load(assets['can.gltf'], gltf => {
+    new GLTFLoader().load(assets['can.gltf'] ?? '', gltf => {
       if (disposed) return;
       const model = gltf.scene;
       model.updateMatrixWorld(true);
@@ -26,7 +26,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       model.position.sub(box.getCenter(new THREE.Vector3()));
       group.add(model); camera.position.z = size.y * 2.1;
       model.traverse(obj => { if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) { material.current = obj.material; obj.material.metalness = .12; obj.material.roughness = .45; } });
-      const texture = new THREE.TextureLoader().load(assets['melo.png']); texture.flipY = false; texture.colorSpace = THREE.SRGBColorSpace;
+      const texture = new THREE.TextureLoader().load(assets['melo.png'] ?? ''); texture.flipY = false; texture.colorSpace = THREE.SRGBColorSpace;
       if (material.current) { material.current.map = texture; material.current.needsUpdate = true; }
     });
     const resize = () => { const w = host.clientWidth; const h = host.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
@@ -39,7 +39,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
     return () => { disposed = true; observer.disconnect(); window.removeEventListener('pointermove', move); renderer.setAnimationLoop(null); renderer.dispose(); host.replaceChildren(); material.current = null; };
   }, []);
   useEffect(() => {
-    const texture = new THREE.TextureLoader().load(assets[['melo.png', 'pamp.png', 'mure.png', 'trop.png'][flavor]], () => {
+    const texture = new THREE.TextureLoader().load(assets[['melo.png', 'pamp.png', 'mure.png', 'trop.png'][flavor] ?? 'melo.png'] ?? '', () => {
       texture.flipY = false; texture.colorSpace = THREE.SRGBColorSpace;
       if (material.current) { material.current.map?.dispose(); material.current.map = texture; material.current.needsUpdate = true; }
     });
