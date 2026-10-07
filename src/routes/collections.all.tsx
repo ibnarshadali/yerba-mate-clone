@@ -1,0 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { Site, ProductGrid } from '@/components/manaya/Site';
+export const Route = createFileRoute('/collections/all')({ head: () => ({ meta: [{ title: 'All our products — MANA Yerba Maté' }, { name: 'description', content: 'Shop all five MANA organic sparkling yerba mate flavors and the discovery box.' }, { property: 'og:title', content: 'Shop MANA Yerba Maté' }, { property: 'og:description', content: 'Discover all our fresh and fruity flavors.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Shop });
+function Shop() { return <Site className="inner-page"><main className="shop-page"><h1>ALL OUR<br />PRODUCTS</h1><ProductGrid /></main></Site>; }

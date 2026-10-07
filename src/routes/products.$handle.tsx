@@ -1,0 +1,15 @@
+import { createFileRoute, notFound } from '@tanstack/react-router';
+import { useState } from 'react';
+import { Minus, Plus, ArrowUpRight } from 'lucide-react';
+import { Site, ProductGrid } from '@/components/manaya/Site';
+import { Button } from '@/components/ui/button';
+import { products, productImages } from '@/data/products';
+export const Route = createFileRoute('/products/$handle')({
+  loader: ({ params }) => { const index = products.findIndex(p => p.handle === params.handle); if (index < 0) throw notFound(); return { product: products[index], image: productImages[index] }; },
+  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.product.title ?? 'Flavors'} — MANA Yerba Maté` }, { name: 'description', content: `Discover ${loaderData?.product.title ?? 'MANA'} organic sparkling yerba mate, starting at $36.99.` }, { property: 'og:title', content: `${loaderData?.product.title ?? 'Flavors'} — MANA` }, { property: 'og:description', content: 'Fresh, fruity, sparkling organic yerba mate.' }, { property: 'og:type', content: 'product' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Product,
+});
+function Product() {
+  const { product, image } = Route.useLoaderData(); const [quantity, setQuantity] = useState(1); const [variant, setVariant] = useState(0); const [subscribe, setSubscribe] = useState(false);
+  const chosen = product.variants[variant];
+  return <Site className="inner-page"><main><section className="product-detail"><img className="detail-image" src={image} alt={product.title} /><div className="detail-copy"><p>ORGANIC SPARKLING YERBA MATE</p><h1>{product.title}</h1><div className="product-description" dangerouslySetInnerHTML={{ __html: product.description }} /><div className="variant-options">{product.variants.map((v, i) => <Button key={v.id} className={`outline-pill ${variant === i ? 'selected' : ''}`} onClick={() => setVariant(i)}>{v.title}</Button>)}</div><label className="subscription-option"><input type="checkbox" checked={subscribe} onChange={e => setSubscribe(e.target.checked)} />Subscribe and save 10%</label><div className="purchase-row"><div className="quantity"><Button variant="ghost" size="icon" aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></Button><span>{quantity}</span><Button variant="ghost" size="icon" aria-label="Increase quantity" onClick={() => setQuantity(quantity + 1)}><Plus /></Button></div><strong>${(Number(chosen.price) * quantity * (subscribe ? .9 : 1)).toFixed(2)}</strong></div><Button asChild className="purchase-button"><a href={subscribe ? `https://en.manayerbamate.com/products/${product.handle}` : `https://en.manayerbamate.com/cart/${chosen.id}:${quantity}`}>{subscribe ? 'Choose subscription' : 'Add to cart'}<ArrowUpRight /></a></Button><p className="delivery-note">Free shipping on purchases of $35 or more in Quebec and Ontario.</p></div></section><section className="recommended"><h2>You might also like</h2><ProductGrid /></section></main></Site>;
+}
