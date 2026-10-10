@@ -35,8 +35,20 @@ export default function CanScene({ flavor }: { flavor: number }) {
     const move = (event: PointerEvent) => { mouseX = (event.clientX / window.innerWidth - .5) * .45; mouseY = (event.clientY / window.innerHeight - .5) * .2; };
     window.addEventListener('pointermove', move);
     const clock = new THREE.Clock(); const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    renderer.setAnimationLoop(() => { const t = clock.getElapsedTime(); group.rotation.y = -.3 + mouseX; group.rotation.z = reduced ? 0 : Math.sin(t * .6) * .055; group.rotation.x = mouseY; renderer.render(scene, camera); });
-    return () => { disposed = true; observer.disconnect(); window.removeEventListener('pointermove', move); renderer.setAnimationLoop(null); renderer.dispose(); host.replaceChildren(); material.current = null; };
+    let scroll = window.scrollY; let smoothScroll = scroll;
+    const onScroll = () => { scroll = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    renderer.setAnimationLoop(() => {
+      const t = clock.getElapsedTime();
+      smoothScroll += (scroll - smoothScroll) * .08;
+      const spin = smoothScroll * .004;
+      group.rotation.y = -.3 + mouseX + spin;
+      group.rotation.z = reduced ? 0 : Math.sin(t * .6) * .055 + spin * .12;
+      group.rotation.x = mouseY + spin * .06;
+      group.position.y = reduced ? 0 : Math.sin(t * .8) * .04;
+      renderer.render(scene, camera);
+    });
+    return () => { disposed = true; observer.disconnect(); window.removeEventListener('pointermove', move); window.removeEventListener('scroll', onScroll); renderer.setAnimationLoop(null); renderer.dispose(); host.replaceChildren(); material.current = null; };
   }, []);
   useEffect(() => {
     const texture = new THREE.TextureLoader().load(assets[['melo.png', 'pamp.png', 'mure.png', 'trop.png'][flavor] ?? 'melo.png'] ?? '', () => {
