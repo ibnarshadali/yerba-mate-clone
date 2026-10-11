@@ -11,3 +11,5 @@
 
 - Recreate public reference content in TanStack routes using CDN asset pointers; this preserves the target runtime and original media.
 - Keep commerce completion linked to the original store until owner access is supplied; a public-site clone cannot provision independent payments or private accounts.
+
+- The homepage can animation is driven by CanScene, which reads scroll position from elements marked data-can-hero and data-can-circle and writes CSS variables back to them; keeps all scroll choreography in one animation loop.
