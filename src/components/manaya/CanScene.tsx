@@ -17,6 +17,10 @@ const TAU = Math.PI * 2;
 const CLOSED_TIME = 2.48;
 const OPEN_TIME = 2.72;
 const WHEEL_DEGREES = 100;
+// Can fills ~46% of the square canvas at rest, like the reference.
+const CAN_SCALE = 180;
+// How far the canvas drops (fraction of its size) by the end of the hero; leaves the open can top visible above the bottom edge.
+const DROP = 0.52;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -93,7 +97,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
     new GLTFLoader().load(assets['can.gltf'] ?? '', gltf => {
       if (disposed) return;
       model = gltf.scene;
-      model.scale.setScalar(270);
+      model.scale.setScalar(CAN_SCALE);
       model.traverse(obj => {
         obj.frustumCulled = false;
         if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
@@ -186,6 +190,8 @@ export default function CanScene({ flavor }: { flavor: number }) {
 
       const hidden = desktop && exit > H;
       el.style.visibility = hidden ? 'hidden' : 'visible';
+      // Clip the can at the bottom edge of the benefit wheel so it never covers the next section.
+      el.style.clipPath = desktop && exit > 0 ? `inset(0 0 ${exit.toFixed(1)}px 0)` : 'none';
       if (hidden || !model) return;
 
       // Intro: can rises from below and unwinds into place.
@@ -198,7 +204,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       group.rotation.set(lerp(0, 1.12 * Math.PI, p) + 0.3 * Math.PI * unwind, lerp(0, -Math.PI, p) + TAU * unwind, lerp(0, -Math.PI, p) + 0.2 * Math.PI * unwind);
       group.position.z = 20 * p;
       camera.position.y = desktop ? 8 * p : 0.6;
-      const canvasY = rise + p * (0.58 * size + margin) - exit;
+      const canvasY = rise + p * (DROP * size + margin) - exit;
       canvas.style.transform = `translate(-50%, ${(margin + canvasY).toFixed(1)}px)`;
 
       // Pointer lean.

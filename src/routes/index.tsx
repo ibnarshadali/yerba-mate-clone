@@ -45,7 +45,7 @@ function Index() {
         <div className="circle-arc" aria-hidden="true" />
         <div className="wheel">
           <div className="wheel-card"><div className="wheel-step"><h2>MANA ? YERBA MATÉ ?<br />WHAT ARE WE TALKING ABOUT?</h2><p className="wheel-sub">(we're going to tell each other the real things)</p></div></div>
-          {benefits.map(([title, text], i) => <div className="wheel-card" key={title} style={{ transform: `rotate(${(i + 1) * 25}deg)` }}><div className="wheel-step benefit-step"><Animation url={assets[`benefit-${i + 1}.json`]} className="benefit-art" /><h3>{title}</h3><p>{text}</p></div></div>)}
+          {benefits.map(([title, text], i) => <div className="wheel-card" key={title} style={{ transform: `rotate(${(i + 1) * 25}deg)` }}><div className="wheel-step"><article className="benefit-card"><h3>{title}</h3><p>{text}</p><Animation url={assets[`benefit-${i + 1}.json`]} className="benefit-art" /></article></div></div>)}
         </div>
       </div>
     </section>
