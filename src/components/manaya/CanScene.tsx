@@ -17,10 +17,9 @@ const TAU = Math.PI * 2;
 const CLOSED_TIME = 2.48;
 const OPEN_TIME = 2.72;
 const WHEEL_DEGREES = 100;
-// Can fills ~46% of the square canvas at rest, like the reference.
-const CAN_SCALE = 180;
-// How far the canvas drops (fraction of its size) by the end of the hero; leaves the open can top visible above the bottom edge.
-const DROP = 0.52;
+// Larger product silhouette; canvas sizing also follows the viewport height.
+const CAN_SCALE = 230;
+const BUBBLE_COUNT = 64;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -71,6 +70,50 @@ export default function CanScene({ flavor }: { flavor: number }) {
     const mouseGroup = new THREE.Group();
     group.add(mouseGroup);
     scene.add(group);
+
+    // A reusable pool keeps the fizz attached to the animated mouth without
+    // introducing another scroll loop or a React update on every frame.
+    const swatch = document.createElement('canvas').getContext('2d');
+    const bubbleColor = new THREE.Color();
+    if (swatch) {
+      swatch.fillStyle = getComputedStyle(el).getPropertyValue('--mana-white').trim();
+      swatch.fillRect(0, 0, 1, 1);
+      const pixel = swatch.getImageData(0, 0, 1, 1).data;
+      bubbleColor.setRGB((pixel[0] ?? 255) / 255, (pixel[1] ?? 255) / 255, (pixel[2] ?? 255) / 255, THREE.SRGBColorSpace);
+    }
+    const bubbleGeometry = new THREE.SphereGeometry(1, 12, 8);
+    const bubbleMaterial = new THREE.MeshPhysicalMaterial({
+      color: bubbleColor, transparent: true, opacity: 0.58,
+      roughness: 0.08, metalness: 0.1, clearcoat: 1,
+      envMapIntensity: 1.8, depthWrite: false,
+    });
+    const bubbles = new THREE.InstancedMesh(bubbleGeometry, bubbleMaterial, BUBBLE_COUNT);
+    bubbles.frustumCulled = false;
+    bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(bubbles);
+    const particles = Array.from({ length: BUBBLE_COUNT }, () => ({
+      position: new THREE.Vector3(), velocity: new THREE.Vector3(), life: 0, duration: 1, radius: 0,
+    }));
+    const dummy = new THREE.Object3D();
+    const mouth = new THREE.Vector3();
+    let fizzClock = 0;
+    let burstPending = false;
+    const emitBubbles = (count: number) => {
+      if (!model || reduced) return;
+      model.updateWorldMatrix(true, true);
+      mouth.set(0, 0.079, 0.008);
+      model.localToWorld(mouth);
+      for (const particle of particles) {
+        if (particle.life > 0 || count <= 0) continue;
+        particle.position.copy(mouth);
+        particle.position.x += (Math.random() - 0.5) * 1.3;
+        particle.velocity.set((Math.random() - 0.5) * 5, 8 + Math.random() * 10, 2 + Math.random() * 3);
+        particle.duration = 1.3 + Math.random() * 1.3;
+        particle.life = particle.duration;
+        particle.radius = 0.25 + Math.random() * 0.65;
+        count--;
+      }
+    };
 
     const anisotropy = renderer.capabilities.getMaxAnisotropy();
     const loader = new THREE.TextureLoader();
@@ -127,7 +170,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       const W = window.innerWidth;
       const H = el.clientHeight || window.innerHeight;
       desktop = W > 600;
-      size = desktop ? Math.min(900, Math.max(650, W / 2)) : W * 0.9;
+      size = desktop ? Math.max(650, Math.min(W * 0.95, H * 1.1)) : W * 0.95;
       margin = (H - size) / 2;
       renderer.setSize(size, size);
       camera.aspect = 1;
@@ -202,18 +245,22 @@ export default function CanScene({ flavor }: { flavor: number }) {
       // Scroll: tip over, move closer, drop down.
       const p = smooth.hero;
       group.rotation.set(lerp(0, 1.12 * Math.PI, p) + 0.3 * Math.PI * unwind, lerp(0, -Math.PI, p) + TAU * unwind, lerp(0, -Math.PI, p) + 0.2 * Math.PI * unwind);
-      group.position.z = 20 * p;
+      group.position.z = 12 * p;
       camera.position.y = desktop ? 8 * p : 0.6;
-      const canvasY = rise + p * (DROP * size + margin) - exit;
-      canvas.style.transform = `translate(-50%, ${(margin + canvasY).toFixed(1)}px)`;
+      // Interpolate screen-space centers, not two accumulated margins. The
+      // open lid rests beneath the cards throughout the wheel's sticky span.
+      const wheelTop = H * 1.02 - size / 2;
+      const canvasY = rise + lerp(margin, wheelTop, p) - exit;
+      canvas.style.transform = `translate(-50%, ${canvasY.toFixed(1)}px)`;
 
       // Pointer lean.
       const k = 6;
-      mouseGroup.position.x = damp(mouseGroup.position.x, mouseTarget.x, k, dt);
-      mouseGroup.position.y = damp(mouseGroup.position.y, mouseTarget.y, k, dt);
-      mouseGroup.rotation.x = damp(mouseGroup.rotation.x, mouseTarget.rx, k, dt);
-      mouseGroup.rotation.y = damp(mouseGroup.rotation.y, mouseTarget.ry, k, dt);
-      mouseGroup.rotation.z = damp(mouseGroup.rotation.z, mouseTarget.rz, k, dt);
+      const pointerWeight = 1 - p;
+      mouseGroup.position.x = damp(mouseGroup.position.x, mouseTarget.x * pointerWeight, k, dt);
+      mouseGroup.position.y = damp(mouseGroup.position.y, mouseTarget.y * pointerWeight, k, dt);
+      mouseGroup.rotation.x = damp(mouseGroup.rotation.x, mouseTarget.rx * pointerWeight, k, dt);
+      mouseGroup.rotation.y = damp(mouseGroup.rotation.y, mouseTarget.ry * pointerWeight, k, dt);
+      mouseGroup.rotation.z = damp(mouseGroup.rotation.z, mouseTarget.rz * pointerWeight, k, dt);
 
       // Flavor spin + wobble, texture swap mid-spin.
       let spinY = 0;
@@ -234,6 +281,8 @@ export default function CanScene({ flavor }: { flavor: number }) {
       // Tab opens when the benefit wheel pins.
       if (wantOpen !== openTarget && action && mixer) {
         openTarget = wantOpen;
+        burstPending = wantOpen;
+        if (!wantOpen) particles.forEach(particle => { particle.life = 0; });
         action.play();
         openTween = wantOpen
           ? { from: openTime, to: OPEN_TIME, start: now + 0.1, duration: 0.7, ease: t => elasticOut(t, 1, 0.75) }
@@ -245,6 +294,29 @@ export default function CanScene({ flavor }: { flavor: number }) {
         if (tweenDone(openTween, now)) openTween = null;
       }
 
+      if (openTarget && openTime > CLOSED_TIME + 0.08) {
+        if (burstPending) { emitBubbles(22); burstPending = false; }
+        fizzClock += dt;
+        while (fizzClock >= 0.075) { emitBubbles(1); fizzClock -= 0.075; }
+      } else fizzClock = 0;
+      let liveBubbles = 0;
+      particles.forEach((particle, i) => {
+        particle.life = Math.max(0, particle.life - dt);
+        if (particle.life > 0) {
+          particle.position.addScaledVector(particle.velocity, dt);
+          particle.velocity.x *= Math.exp(-0.7 * dt);
+          const t = 1 - particle.life / particle.duration;
+          dummy.position.copy(particle.position);
+          dummy.scale.setScalar(particle.radius * Math.min(1, t * 10) * Math.min(1, (1 - t) * 4));
+          liveBubbles++;
+        } else dummy.scale.setScalar(0);
+        dummy.updateMatrix();
+        bubbles.setMatrixAt(i, dummy.matrix);
+      });
+      bubbles.instanceMatrix.needsUpdate = true;
+      el.dataset.bubbles = String(liveBubbles);
+      el.dataset.open = String(openTarget);
+
       renderer.render(scene, camera);
     });
 
@@ -255,6 +327,9 @@ export default function CanScene({ flavor }: { flavor: number }) {
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', onPointer);
       renderer.setAnimationLoop(null);
+      bubbleGeometry.dispose();
+      bubbleMaterial.dispose();
+      bubbles.dispose();
       textures.forEach(t => t.dispose());
       envTexture.dispose();
       pmrem.dispose();
