@@ -19,6 +19,8 @@ const OPEN_TIME = 2.72;
 const WHEEL_DEGREES = 100;
 // Can fills ~46% of the square canvas at rest, like the reference.
 const CAN_SCALE = 180;
+// How far the canvas drops (fraction of its size) by the end of the hero; leaves the open can top visible above the bottom edge.
+const DROP = 0.52;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -202,7 +204,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       group.rotation.set(lerp(0, 1.12 * Math.PI, p) + 0.3 * Math.PI * unwind, lerp(0, -Math.PI, p) + TAU * unwind, lerp(0, -Math.PI, p) + 0.2 * Math.PI * unwind);
       group.position.z = 20 * p;
       camera.position.y = desktop ? 8 * p : 0.6;
-      const canvasY = rise + p * (0.58 * size + margin) - exit;
+      const canvasY = rise + p * (DROP * size + margin) - exit;
       canvas.style.transform = `translate(-50%, ${(margin + canvasY).toFixed(1)}px)`;
 
       // Pointer lean.
