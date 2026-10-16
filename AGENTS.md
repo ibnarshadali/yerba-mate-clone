@@ -13,3 +13,4 @@
 - Keep commerce completion linked to the original store until owner access is supplied; a public-site clone cannot provision independent payments or private accounts.
 
 - The homepage can animation is driven by CanScene, which reads scroll position from elements marked data-can-hero and data-can-circle and writes CSS variables back to them; keeps all scroll choreography in one animation loop.
+- Prioritize the homepage model and selected flavor; load other flavor textures on selection and Lottie artwork near the viewport to avoid competing with the first product render.

@@ -8,7 +8,11 @@ import { products } from '@/data/products';
 import { assets } from '@/data/assets';
 const CanScene = lazy(() => import('@/components/manaya/CanScene'));
 export const Route = createFileRoute('/')({
-  head: () => ({ meta: [{ title: 'MANA Yerba Maté — Infused with bio energy' }, { name: 'description', content: 'Fresh, fruity, sparkling organic yerba mate. Discover MANA’s naturally caffeinated flavors.' }, { property: 'og:title', content: 'MANA Yerba Maté' }, { property: 'og:description', content: 'Infused with bio energy. Discover our sparkling organic yerba mate.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }),
+  // Discover the product resources before the client-only renderer starts.
+  head: () => ({ links: [
+    { rel: 'preload', href: assets['can.gltf'], as: 'fetch', crossOrigin: 'anonymous' },
+    { rel: 'preload', href: assets['melo.png'], as: 'image' },
+  ], meta: [{ title: 'MANA Yerba Maté — Infused with bio energy' }, { name: 'description', content: 'Fresh, fruity, sparkling organic yerba mate. Discover MANA’s naturally caffeinated flavors.' }, { property: 'og:title', content: 'MANA Yerba Maté' }, { property: 'og:description', content: 'Infused with bio energy. Discover our sparkling organic yerba mate.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }),
   component: Index,
 });
 const flavorKeys = ['melon', 'grapefruit', 'blackberry', 'tropical'];
