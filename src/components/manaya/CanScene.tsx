@@ -249,7 +249,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       camera.position.y = desktop ? 8 * p : 0.6;
       // Interpolate screen-space centers, not two accumulated margins. The
       // open lid rests beneath the cards throughout the wheel's sticky span.
-      const wheelTop = H * 1.02 - size / 2;
+      const wheelTop = H * 1.10 - size / 2;
       const canvasY = rise + lerp(margin, wheelTop, p) - exit;
       canvas.style.transform = `translate(-50%, ${canvasY.toFixed(1)}px)`;
 
@@ -314,8 +314,8 @@ export default function CanScene({ flavor }: { flavor: number }) {
         bubbles.setMatrixAt(i, dummy.matrix);
       });
       bubbles.instanceMatrix.needsUpdate = true;
-      el.dataset.bubbles = String(liveBubbles);
-      el.dataset.open = String(openTarget);
+      el.dataset['bubbles'] = String(liveBubbles);
+      el.dataset['open'] = String(openTarget);
 
       renderer.render(scene, camera);
     });
