@@ -314,8 +314,8 @@ export default function CanScene({ flavor }: { flavor: number }) {
         bubbles.setMatrixAt(i, dummy.matrix);
       });
       bubbles.instanceMatrix.needsUpdate = true;
-      el.dataset.bubbles = String(liveBubbles);
-      el.dataset.open = String(openTarget);
+      el.dataset['bubbles'] = String(liveBubbles);
+      el.dataset['open'] = String(openTarget);
 
       renderer.render(scene, camera);
     });
