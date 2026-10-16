@@ -117,13 +117,20 @@ export default function CanScene({ flavor }: { flavor: number }) {
 
     const anisotropy = renderer.capabilities.getMaxAnisotropy();
     const loader = new THREE.TextureLoader();
-    const textures = TEXTURES.map(name => {
-      const tex = loader.load(assets[name] ?? '');
+    const textures: Array<THREE.Texture | undefined> = [];
+    const loadTexture = (index: number) => {
+      const existing = textures[index];
+      if (existing) return existing;
+      const name = TEXTURES[index];
+      if (!name || !assets[name]) return undefined;
+      const tex = loader.load(assets[name]);
       tex.flipY = false;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = anisotropy;
+      textures[index] = tex;
       return tex;
-    });
+    };
+    loadTexture(flavor);
 
     let model: THREE.Object3D | null = null;
     let material: THREE.MeshStandardMaterial | null = null;
@@ -160,6 +167,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       if (index === currentFlavor) return;
       const dir = (index - currentFlavor + 4) % 4 === 1 ? 1 : -1;
       currentFlavor = index;
+      loadTexture(index);
       spin = { start: performance.now() / 1000, dir, texture: index, swapped: false };
     };
 
@@ -238,7 +246,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       if (hidden || !model) return;
 
       // Intro: can rises from below and unwinds into place.
-      const introT = introStart < 0 ? 0 : reduced ? 1 : clamp01((now - introStart - 0.3) / 1.1);
+      const introT = introStart < 0 ? 0 : reduced ? 1 : clamp01((now - introStart) / 0.65);
       const unwind = 1 - quadOut(introT);
       const rise = (1 - elasticOut(introT, 1, 0.75)) * (el.clientHeight || H);
 
@@ -330,7 +338,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
       bubbleGeometry.dispose();
       bubbleMaterial.dispose();
       bubbles.dispose();
-      textures.forEach(t => t.dispose());
+      textures.forEach(t => t?.dispose());
       envTexture.dispose();
       pmrem.dispose();
       renderer.dispose();
