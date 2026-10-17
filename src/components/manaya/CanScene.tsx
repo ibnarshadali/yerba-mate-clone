@@ -42,9 +42,16 @@ type Tween = { from: number; to: number; start: number; duration: number; ease: 
 const tweenValue = (tw: Tween, now: number) => lerp(tw.from, tw.to, tw.ease(clamp01((now - tw.start) / tw.duration)));
 const tweenDone = (tw: Tween, now: number) => now - tw.start >= tw.duration;
 
-export default function CanScene({ flavor }: { flavor: number }) {
+export default function CanScene({ flavor, direction, onFlavorVisible, onFlavorSettled }: {
+  flavor: number;
+  direction: number;
+  onFlavorVisible: (index: number) => void;
+  onFlavorSettled: () => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
-  const setFlavorRef = useRef<((index: number) => void) | null>(null);
+  const setFlavorRef = useRef<((index: number, direction: number) => void) | null>(null);
+  const callbacks = useRef({ onFlavorVisible, onFlavorSettled });
+  useEffect(() => { callbacks.current = { onFlavorVisible, onFlavorSettled }; }, [onFlavorVisible, onFlavorSettled]);
 
   useEffect(() => {
     const el = host.current;
@@ -118,12 +125,18 @@ export default function CanScene({ flavor }: { flavor: number }) {
     const anisotropy = renderer.capabilities.getMaxAnisotropy();
     const loader = new THREE.TextureLoader();
     const textures: Array<THREE.Texture | undefined> = [];
+    const readyTextures = new Set<number>();
+    let pendingFlavor: { index: number; dir: number } | null = null;
     const loadTexture = (index: number) => {
       const existing = textures[index];
       if (existing) return existing;
       const name = TEXTURES[index];
       if (!name || !assets[name]) return undefined;
-      const tex = loader.load(assets[name]);
+      const tex = loader.load(assets[name], () => { readyTextures.add(index); }, undefined, () => {
+        if (pendingFlavor?.index !== index) return;
+        pendingFlavor = null;
+        callbacks.current.onFlavorSettled();
+      });
       tex.flipY = false;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = anisotropy;
@@ -163,12 +176,10 @@ export default function CanScene({ flavor }: { flavor: number }) {
       introStart = performance.now() / 1000;
     });
 
-    setFlavorRef.current = (index: number) => {
+    setFlavorRef.current = (index: number, dir: number) => {
       if (index === currentFlavor) return;
-      const dir = (index - currentFlavor + 4) % 4 === 1 ? 1 : -1;
-      currentFlavor = index;
+      pendingFlavor = { index, dir };
       loadTexture(index);
-      spin = { start: performance.now() / 1000, dir, texture: index, swapped: false };
     };
 
     let size = 650;
@@ -244,6 +255,10 @@ export default function CanScene({ flavor }: { flavor: number }) {
       // Clip the can at the bottom edge of the benefit wheel so it never covers the next section.
       el.style.clipPath = desktop && exit > 0 ? `inset(0 0 ${exit.toFixed(1)}px 0)` : 'none';
       if (hidden || !model) return;
+      if (pendingFlavor && readyTextures.has(pendingFlavor.index) && !spin) {
+        spin = { start: now, dir: pendingFlavor.dir, texture: pendingFlavor.index, swapped: false };
+        pendingFlavor = null;
+      }
 
       // Intro: can rises from below and unwinds into place.
       const introT = introStart < 0 ? 0 : reduced ? 1 : clamp01((now - introStart) / 0.65);
@@ -263,7 +278,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
 
       // Pointer lean.
       const k = 6;
-      const pointerWeight = 1 - p;
+      const pointerWeight = spin ? 0 : 1 - p;
       mouseGroup.position.x = damp(mouseGroup.position.x, mouseTarget.x * pointerWeight, k, dt);
       mouseGroup.position.y = damp(mouseGroup.position.y, mouseTarget.y * pointerWeight, k, dt);
       mouseGroup.rotation.x = damp(mouseGroup.rotation.x, mouseTarget.rx * pointerWeight, k, dt);
@@ -273,16 +288,36 @@ export default function CanScene({ flavor }: { flavor: number }) {
       // Flavor spin + wobble, texture swap mid-spin.
       let spinY = 0;
       let wobbleX = 0;
+      let artAngle = 0;
+      let artOpacity = 1;
       if (spin) {
-        const t = now - spin.start;
-        if (t < 0.3) spinY = lerp(0, 0.6 * Math.PI * spin.dir, quadIn(t / 0.3));
-        else spinY = lerp(0.6 * Math.PI * spin.dir, TAU * spin.dir, elasticOut((t - 0.3) / 1.3, 0.34, 0.26));
+        const t = reduced ? 1.6 : now - spin.start;
+        if (t < 0.3) {
+          const progress = quadIn(t / 0.3);
+          spinY = Math.PI * spin.dir * progress;
+          artAngle = -18 * spin.dir * progress;
+          artOpacity = 1 - progress;
+        } else {
+          const progress = elasticOut(clamp01((t - 0.3) / 1.3), 1, 0.4);
+          spinY = lerp(Math.PI * spin.dir, TAU * spin.dir, progress);
+          artAngle = 18 * spin.dir * (1 - progress);
+          artOpacity = clamp01((t - 0.3) / 0.2);
+        }
         const w = t < 0.5 ? t / 0.5 : 1 - (t - 0.5) / 0.5;
-        wobbleX = -3 * spin.dir * sineInOut(clamp01(w));
+        wobbleX = -0.9 * spin.dir * sineInOut(clamp01(w));
         const mat = material as THREE.MeshStandardMaterial | null;
-        if (!spin.swapped && t >= 0.3 && mat) { mat.map = textures[spin.texture] ?? mat.map; mat.needsUpdate = true; spin.swapped = true; }
-        if (t >= 1.6) spin = null;
+        if (!spin.swapped && t >= 0.3 && mat) {
+          mat.map = textures[spin.texture] ?? mat.map;
+          mat.needsUpdate = true;
+          spin.swapped = true;
+          currentFlavor = spin.texture;
+          callbacks.current.onFlavorVisible(currentFlavor);
+        }
+        if (t >= 1.6) { spin = null; callbacks.current.onFlavorSettled(); }
       }
+      heroEl?.style.setProperty('--flavor-art-angle', `${artAngle.toFixed(3)}deg`);
+      heroEl?.style.setProperty('--flavor-art-opacity', artOpacity.toFixed(3));
+      el.dataset['flavorChanging'] = String(Boolean(spin || pendingFlavor));
       model.rotation.y = spinY + TAU * sineInOut(smooth.circle);
       model.position.x = wobbleX;
 
@@ -347,7 +382,7 @@ export default function CanScene({ flavor }: { flavor: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { setFlavorRef.current?.(flavor); }, [flavor]);
+  useEffect(() => { setFlavorRef.current?.(flavor, direction); }, [flavor, direction]);
 
   return <div className="can-stage" ref={host} role="img" aria-label="MANA sparkling yerba mate can" />;
 }
