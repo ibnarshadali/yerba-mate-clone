@@ -19,11 +19,18 @@ const flavorKeys = ['melon', 'grapefruit', 'blackberry', 'tropical'];
 const benefits = [['WITHOUT THE CRASH', 'A gentle wave of energy. To get you going without the crash.'], ['NATURAL CAFFEINE', 'This certified organic caffeine comes from the plant. A gift from Mother Nature.'], ['ANTIOXIDANT', 'Richer in antioxidants than tea. Not bad.'], ['VEGAN', 'A plant-based drink that tastes like heaven. Who could ask for more?']];
 function Index() {
   const [flavor, setFlavor] = useState(0);
+  const [requestedFlavor, setRequestedFlavor] = useState(0);
+  const [changingFlavor, setChangingFlavor] = useState(false);
   const dir = useRef(1);
   const key = flavorKeys[flavor] ?? 'melon';
   const current = products[flavor];
   if (!current) return null;
-  const change = (delta: number) => { dir.current = delta; setFlavor((flavor + delta + 4) % 4); };
+  const change = (delta: number) => {
+    if (changingFlavor) return;
+    dir.current = delta;
+    setChangingFlavor(true);
+    setRequestedFlavor((flavor + delta + 4) % 4);
+  };
   const leftArt = (n: number) => n === 1 || (n === 2 && key === 'blackberry');
   const art = (left: boolean) => <>
     {[1, 2, 3].filter(n => leftArt(n) === left).map(n => assets[`${key}-${n}.json`] && <Animation key={n} url={assets[`${key}-${n}.json`]} className={`hero-illustration illustration-${n}`} />)}
@@ -36,13 +43,13 @@ function Index() {
     <section className="drink-hero" data-can-hero aria-label="MANA Yerba Maté">
       <h1 className="sr-only">MANA — Infused with bio energy</h1>
       <div className="hero-stage">
-        <div className={`hero-art swing-${dir.current > 0 ? 'next' : 'prev'}`} key={key}>
+        <div className="hero-art" key={key}>
           <div className="art-side art-left">{art(true)}</div>
           <div className="art-side art-right">{art(false)}</div>
         </div>
-        <div className="hero-controls"><Button className="nav-pill round" onClick={() => change(-1)} aria-label="Previous flavor"><ArrowLeft /></Button><Button className="flavor-button" asChild><Link to="/products/$handle" params={{ handle: current.handle }}>{current.title}</Link></Button><Button className="nav-pill round" onClick={() => change(1)} aria-label="Next flavor"><ArrowRight /></Button></div>
+        <div className="hero-controls"><Button className="nav-pill round" disabled={changingFlavor} onClick={() => change(-1)} aria-label="Previous flavor"><ArrowLeft /></Button><Button className="flavor-button" asChild><Link to="/products/$handle" params={{ handle: current.handle }}>{current.title}</Link></Button><Button className="nav-pill round" disabled={changingFlavor} onClick={() => change(1)} aria-label="Next flavor"><ArrowRight /></Button></div>
       </div>
-      <ClientOnly><Suspense fallback={<div className="can-stage" />}><CanScene flavor={flavor} /></Suspense></ClientOnly>
+      <ClientOnly><Suspense fallback={<div className="can-stage" />}><CanScene flavor={requestedFlavor} direction={dir.current} onFlavorVisible={setFlavor} onFlavorSettled={() => setChangingFlavor(false)} /></Suspense></ClientOnly>
     </section>
     <section className="benefit-circle" data-can-circle aria-label="Why MANA">
       <div className="circle-pin">
